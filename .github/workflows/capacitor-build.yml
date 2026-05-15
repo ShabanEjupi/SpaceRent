@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Install Dependencies
         run: npm install
       - name: Build Web App
@@ -26,8 +26,8 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: "zulu"
+          java-version: "17"
       - name: Build Android APK
         run: |
           cd android
@@ -38,7 +38,7 @@ jobs:
         with:
           name: android-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
+
   build-ios:
     runs-on: macos-latest
     steps:
@@ -46,7 +46,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Install Dependencies
         run: npm install
       - name: Build Web App
