@@ -19,6 +19,17 @@ jobs:
           node-version: 22
       - name: Install Dependencies
         run: npm install
+      - name: Create Env File
+        run: |
+          echo "APP_URL=${{ secrets.APP_URL }}" >> .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "SMTP_USER=${{ secrets.SMTP_USER }}" >> .env
+          echo "SMTP_PASS=${{ secrets.SMTP_PASS }}" >> .env
+          echo "PAYPAL_CLIENT_ID=${{ secrets.PAYPAL_CLIENT_ID }}" >> .env
+          echo "PAYPAL_CLIENT_SECRET=${{ secrets.PAYPAL_CLIENT_SECRET }}" >> .env
+          echo "PAYPAL_API_BASE=${{ secrets.PAYPAL_API_BASE }}" >> .env
+          echo "VITE_PAYPAL_CLIENT_ID=${{ secrets.VITE_PAYPAL_CLIENT_ID }}" >> .env
       - name: Build Web App
         run: npm run build
       - name: Sync Capacitor
@@ -27,7 +38,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: "zulu"
-          java-version: "21"
+          java-version: "17"
       - name: Build Android APK
         run: |
           cd android
@@ -48,6 +59,17 @@ jobs:
           node-version: 22
       - name: Install Dependencies
         run: npm install
+      - name: Create Env File
+        run: |
+          echo "APP_URL=${{ secrets.APP_URL }}" >> .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "SMTP_USER=${{ secrets.SMTP_USER }}" >> .env
+          echo "SMTP_PASS=${{ secrets.SMTP_PASS }}" >> .env
+          echo "PAYPAL_CLIENT_ID=${{ secrets.PAYPAL_CLIENT_ID }}" >> .env
+          echo "PAYPAL_CLIENT_SECRET=${{ secrets.PAYPAL_CLIENT_SECRET }}" >> .env
+          echo "PAYPAL_API_BASE=${{ secrets.PAYPAL_API_BASE }}" >> .env
+          echo "VITE_PAYPAL_CLIENT_ID=${{ secrets.VITE_PAYPAL_CLIENT_ID }}" >> .env
       - name: Build Web App
         run: npm run build
       - name: Sync Capacitor
