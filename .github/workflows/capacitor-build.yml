@@ -32,6 +32,8 @@ jobs:
           echo "VITE_PAYPAL_CLIENT_ID=${{ secrets.VITE_PAYPAL_CLIENT_ID }}" >> .env
       - name: Build Web App
         run: npm run build
+      - name: Fix Assets Generation
+        run: node scripts/fix-assets.cjs
       - name: Sync Capacitor
         run: npx cap sync android
       - name: Setup Java
@@ -42,8 +44,7 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          gradle assembleDebug
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -73,6 +74,8 @@ jobs:
           echo "VITE_PAYPAL_CLIENT_ID=${{ secrets.VITE_PAYPAL_CLIENT_ID }}" >> .env
       - name: Build Web App
         run: npm run build
+      - name: Fix Assets Generation
+        run: node scripts/fix-assets.cjs
       - name: Sync Capacitor
         run: npx cap sync ios
       - name: Build iOS App
