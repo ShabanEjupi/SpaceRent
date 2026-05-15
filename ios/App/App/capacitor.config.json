@@ -1,0 +1,6 @@
+{
+	"appId": "com.spacerent.app",
+	"appName": "SpaceRent",
+	"webDir": "dist",
+	"packageClassList": []
+}
