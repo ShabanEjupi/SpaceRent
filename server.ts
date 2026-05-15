@@ -152,6 +152,7 @@ app.get("/api/admin/dashboard", authenticateToken, async (req: any, res) => {
 
   const { data: vehicles } = await supabase.from('vehicles').select('*');
   const { data: users } = await supabase.from('users').select('id, email, role');
+  const { data: locations } = await supabase.from('locations').select('*');
   
   res.json({
     metrics: { bookings: bookingsCount || 0 },
@@ -160,8 +161,46 @@ app.get("/api/admin/dashboard", authenticateToken, async (req: any, res) => {
     bookings: recentBookings || [],
     partners: allPartners,
     vehicles: vehicles || [],
-    users: users || []
+    users: users || [],
+    locations: locations || []
   });
+});
+
+app.post("/api/admin/edit-booking/:id", authenticateToken, async (req: any, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  const { start_date, end_date, total_price, contact_name, contact_phone, contact_email, status } = req.body;
+  await supabase.from('bookings').update({
+    start_date, end_date, total_price, contact_name, contact_phone, contact_email, status
+  }).eq('id', req.params.id);
+  res.json({ success: true });
+});
+
+app.post("/api/admin/delete-booking/:id", authenticateToken, async (req: any, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  await supabase.from('payments').delete().eq('booking_id', req.params.id);
+  await supabase.from('reviews').delete().eq('booking_id', req.params.id);
+  await supabase.from('bookings').delete().eq('id', req.params.id);
+  res.json({ success: true });
+});
+
+app.post("/api/admin/locations", authenticateToken, async (req: any, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  const { id, name } = req.body;
+  await supabase.from('locations').insert({ id, name });
+  res.json({ success: true });
+});
+
+app.post("/api/admin/locations/:id/update", authenticateToken, async (req: any, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  const { name } = req.body;
+  await supabase.from('locations').update({ name }).eq('id', req.params.id);
+  res.json({ success: true });
+});
+
+app.post("/api/admin/locations/:id/delete", authenticateToken, async (req: any, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  await supabase.from('locations').delete().eq('id', req.params.id);
+  res.json({ success: true });
 });
 
 app.post("/api/admin/users/:id/role", authenticateToken, async (req: any, res) => {
@@ -561,7 +600,7 @@ app.post("/api/bookings/:id/status", authenticateToken, async (req: any, res) =>
   if (req.user.role !== "admin" && req.user.role !== "partner") {
     return res.status(403).json({ error: "Forbidden" });
   }
-  const { status } = req.body;
+  const { status, language = 'en' } = req.body;
   if (!['pending', 'accepted', 'rejected', 'cancelled'].includes(status)) return res.status(400).json({ error: "Invalid status" });
 
   const { data: booking } = await supabase.from('bookings').select('*, vehicles(make, model, partner_id, users(email))').eq('id', req.params.id).maybeSingle();
@@ -575,7 +614,7 @@ app.post("/api/bookings/:id/status", authenticateToken, async (req: any, res) =>
 
   await supabase.from('bookings').update({ status }).eq('id', req.params.id);
 
-  if (status === 'accepted') {
+  if (status === 'accepted' || status === 'rejected' || status === 'cancelled') {
     try {
       if (process.env.SMTP_USER && process.env.SMTP_PASS) {
         const clientEmail = booking.contact_email;
@@ -585,20 +624,51 @@ app.post("/api/bookings/:id/status", authenticateToken, async (req: any, res) =>
         const { data: adminUsers } = await supabase.from('users').select('email').eq('role', 'admin');
         const adminEmails = adminUsers?.map(a => a.email) || [];
         
-        const carName = `${vehicle?.make} ${vehicle?.model}`;
+        const carName = `\${vehicle?.make} \${vehicle?.model}`;
+        
+        const isSq = language === 'sq';
+        const labels = {
+          vehicle: isSq ? 'Automjeti' : 'Vehicle',
+          dates: isSq ? 'Datat' : 'Dates',
+          totalPrice: isSq ? 'Çmimi Total' : 'Total Price',
+          contact: isSq ? 'Kontakti' : 'Contact',
+          contactEmail: isSq ? 'Emaili i Klientit' : 'Client Email',
+          acceptedSubject: isSq ? `SpaceRent: Rezervimi juaj u pranua (\${carName})` : `SpaceRent: Your Booking is Accepted (\${carName})`,
+          rejectedSubject: isSq ? `SpaceRent: Rezervimi juaj u refuzua (\${carName})` : `SpaceRent: Your Booking is Rejected (\${carName})`,
+          cancelledSubject: isSq ? `SpaceRent: Rezervimi juaj u anulua (\${carName})` : `SpaceRent: Your Booking is Cancelled (\${carName})`,
+          acceptedBody: isSq ? `Përshëndetje \${booking.contact_name || 'Klient'},\n\nRezervimi juaj për \${carName} është pranuar.\n\nDetajet e Rezervimit:` : `Hello \${booking.contact_name || 'Client'},\n\nYour booking for \${carName} has been accepted.\n\nBooking Details:`,
+          rejectedBody: isSq ? `Përshëndetje \${booking.contact_name || 'Klient'},\n\nNa vjen keq, por rezervimi juaj për \${carName} është refuzuar.\n\nDetajet e Rezervimit:` : `Hello \${booking.contact_name || 'Client'},\n\nWe are sorry, but your booking for \${carName} has been rejected.\n\nBooking Details:`,
+          cancelledBody: isSq ? `Përshëndetje \${booking.contact_name || 'Klient'},\n\nRezervimi juaj për \${carName} është anulua.\n\nDetajet e Rezervimit:` : `Hello \${booking.contact_name || 'Client'},\n\nYour booking for \${carName} has been cancelled.\n\nBooking Details:`,
+          thanks: isSq ? `\n\nFaleminderit që zgjodhët SpaceRent!` : `\n\nThank you for choosing SpaceRent!`,
+        };
+
         const bookingDetails = `
-Vehicle: ${carName}
-Dates: ${booking.start_date} to ${booking.end_date}
-Total Price: EUR ${booking.total_price}
-Contact: ${booking.contact_name} (${booking.contact_phone})
+\${labels.vehicle}: \${carName}
+\${labels.dates}: \${booking.start_date} - \${booking.end_date}
+\${labels.totalPrice}: EUR \${booking.total_price}
+\${labels.contact}: \${booking.contact_name} (\${booking.contact_phone})
+\${labels.contactEmail}: \${booking.contact_email}
         `;
+
+        let subject = '';
+        let bodyPrefix = '';
+        if (status === 'accepted') {
+          subject = labels.acceptedSubject;
+          bodyPrefix = labels.acceptedBody;
+        } else if (status === 'rejected') {
+          subject = labels.rejectedSubject;
+          bodyPrefix = labels.rejectedBody;
+        } else if (status === 'cancelled') {
+          subject = labels.cancelledSubject;
+          bodyPrefix = labels.cancelledBody;
+        }
 
         if (clientEmail) {
           await transporter.sendMail({
             from: process.env.SMTP_USER,
             to: clientEmail,
-            subject: `SpaceRent: Your Booking is Accepted (${carName})`,
-            text: `Hello ${booking.contact_name || 'Client'},\n\nYour booking for ${carName} has been accepted.\n\nBooking Details:${bookingDetails}\n\nThank you for choosing SpaceRent!`,
+            subject: subject,
+            text: `\${bodyPrefix}\${bookingDetails}\${labels.thanks}`,
           });
         }
 
@@ -606,8 +676,8 @@ Contact: ${booking.contact_name} (${booking.contact_phone})
           await transporter.sendMail({
             from: process.env.SMTP_USER,
             to: partnerEmail,
-            subject: `SpaceRent: Booking Accepted (${carName})`,
-            text: `Hello Partner,\n\nA booking for your vehicle ${carName} has been accepted.\n\nBooking Details:${bookingDetails}`,
+            subject: `SpaceRent: Booking \${status.toUpperCase()} (\${carName})`,
+            text: `Hello Partner,\n\nA booking for your vehicle \${carName} has been \${status}.\n\nBooking Details:\${bookingDetails}`,
           });
         }
 
@@ -615,8 +685,8 @@ Contact: ${booking.contact_name} (${booking.contact_phone})
           await transporter.sendMail({
             from: process.env.SMTP_USER,
             to: adminEmails,
-            subject: `SpaceRent: Booking Accepted (${carName})`,
-            text: `Hello Admin,\n\nA booking for partner vehicle ${carName} has been accepted.\n\nBooking Details:${bookingDetails}`,
+            subject: `SpaceRent: Booking \${status.toUpperCase()} (\${carName})`,
+            text: `Hello Admin,\n\nA booking for partner vehicle \${carName} has been \${status}.\n\nBooking Details:\${bookingDetails}`,
           });
         }
       }

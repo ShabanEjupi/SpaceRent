@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, X } from 'lucide-react';
 
 export default function AdminPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, token } = useAuthStore();
   const navigate = useNavigate();
   const [data, setData] = useState<{ metrics: any, applications: any[], bookings: any[], partners: any[], vehicles: any[], supportRequests: any[], users: any[] } | null>(null);
@@ -113,6 +113,14 @@ export default function AdminPage() {
   const [editingVehicle, setEditingVehicle] = useState<any>(null);
   const [vehicleEdits, setVehicleEdits] = useState({ make: '', model: '', transmission: 'Automatic', fuel_type: 'Diesel', price_per_day: '', ac: true, partner_id: '' });
 
+  const [newLocation, setNewLocation] = useState({ id: '', name: '' });
+  const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [locationEdits, setLocationEdits] = useState({ name: '' });
+
+  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [bookingEdits, setBookingEdits] = useState({ start_date: '', end_date: '', total_price: '', contact_name: '', contact_phone: '', contact_email: '', status: '' });
+
+
   const handleUpdateVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingVehicle) return;
@@ -136,6 +144,74 @@ export default function AdminPage() {
       console.error(e);
       alert('Network error while updating vehicle.');
     }
+  };
+
+  const handleAddLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLocation.id || !newLocation.name) return;
+    try {
+      const res = await fetch(`/api/admin/locations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(newLocation)
+      });
+      if (res.ok) {
+        setNewLocation({ id: '', name: '' });
+        fetchData();
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleUpdateLocation = async (id: string, e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/admin/locations/${id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(locationEdits)
+      });
+      if (res.ok) {
+        setEditingLocation(null);
+        fetchData();
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteLocation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/locations/${id}/delete`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleUpdateBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBooking) return;
+    try {
+      const res = await fetch(`/api/admin/edit-booking/${editingBooking.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(bookingEdits)
+      });
+      if (res.ok) {
+        setEditingBooking(null);
+        fetchData();
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    if(!window.confirm("Are you sure you want to delete this booking?")) return;
+    try {
+      const res = await fetch(`/api/admin/delete-booking/${id}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) fetchData();
+    } catch (e) { console.error(e); }
   };
 
   const handleUpdatePartner = async (e: React.FormEvent) => {
@@ -179,7 +255,7 @@ export default function AdminPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, language: i18n.language })
       });
       if (res.ok) {
         fetchData();
@@ -506,6 +582,35 @@ export default function AdminPage() {
           </div>
         </div>
         <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl p-6 flex flex-col gap-4 lg:col-span-2">
+          <h2 className="text-sm font-black text-white tracking-widest uppercase border-b border-white/10 pb-4">Locations Management</h2>
+          <form onSubmit={handleAddLocation} className="flex gap-2 mb-4">
+            <input value={newLocation.id} onChange={e => setNewLocation({...newLocation, id: e.target.value})} placeholder="ID (e.g. PRN)" required className="w-1/3 bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#E2B808]" />
+            <input value={newLocation.name} onChange={e => setNewLocation({...newLocation, name: e.target.value})} placeholder="Location Name" required className="w-2/3 bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#E2B808]" />
+            <button type="submit" className="bg-[#E2B808] text-black px-6 font-black uppercase text-xs rounded-xl hover:bg-[#E2B808]/90">Add</button>
+          </form>
+          <div className="flex flex-col gap-3 overflow-y-auto max-h-[400px]">
+            {data.locations?.map((loc: any) => (
+              <div key={loc.id} className="bg-white/5 border border-white/5 rounded-xl p-4 flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <div className="font-bold text-sm text-white">{loc.name} <span className="text-[#E2B808] ml-2 text-xs">({loc.id})</span></div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditingLocation(loc); setLocationEdits({ name: loc.name }); }} className="px-3 py-1 bg-white/10 text-white rounded-lg hover:bg-white/20 text-[10px] font-bold uppercase tracking-widest">Edit</button>
+                    <button onClick={() => handleDeleteLocation(loc.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+                {editingLocation?.id === loc.id && (
+                  <form onSubmit={(e) => handleUpdateLocation(loc.id, e)} className="flex gap-2 mt-2">
+                    <input value={locationEdits.name} onChange={e => setLocationEdits({...locationEdits, name: e.target.value})} className="flex-1 bg-white/5 border border-white/10 rounded p-2 text-xs text-white" />
+                    <button type="submit" className="px-3 py-1 bg-[#E2B808] text-black rounded text-[10px] font-bold uppercase tracking-widest">Save</button>
+                    <button type="button" onClick={() => setEditingLocation(null)} className="px-3 py-1 bg-white/10 text-white rounded text-[10px] font-bold uppercase">Cancel</button>
+                  </form>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl p-6 flex flex-col gap-4 lg:col-span-2">
           <h2 className="text-sm font-black text-white tracking-widest uppercase border-b border-white/10 pb-4">User Management</h2>
           <div className="flex flex-col gap-3 overflow-y-auto max-h-[400px]">
              {data.users?.map((u: any) => (
@@ -546,21 +651,56 @@ export default function AdminPage() {
                       <div className="text-[10px] font-mono text-[#E2B808] mb-1">{t('total')}€{b.total_price} | {t('user_id')}{b.user_id}</div>
                       <div className="text-[10px] font-mono text-white/40">{t('dates')}{b.start_date} - {b.end_date}</div>
                     </div>
-                    <select 
-                      value={b.status || 'pending'} 
-                      onChange={(e) => handleUpdateBookingStatus(b.id, e.target.value)}
-                      className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-[#1a1a1a] border border-white/10 ${
-                        b.status === 'accepted' ? 'text-green-500' :
-                        b.status === 'rejected' || b.status === 'cancelled' ? 'text-red-500' :
-                        'text-yellow-500'
-                      }`}
-                    >
-                      <option value="pending">{t('status_pending')}</option>
-                      <option value="accepted">{t('status_accepted')}</option>
-                      <option value="rejected">{t('status_rejected')}</option>
-                      <option value="cancelled">{t('status_cancelled')}</option>
-                    </select>
+                    <div className="mt-4 flex justify-end gap-2">
+                      <select 
+                        value={b.status || 'pending'} 
+                        onChange={(e) => handleUpdateBookingStatus(b.id, e.target.value)}
+                        className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-[#1a1a1a] border border-white/10 ${
+                          b.status === 'accepted' ? 'text-green-500' :
+                          b.status === 'rejected' || b.status === 'cancelled' ? 'text-red-500' :
+                          'text-yellow-500'
+                        }`}
+                      >
+                        <option value="pending">{t('status_pending')}</option>
+                        <option value="accepted">{t('status_accepted')}</option>
+                        <option value="rejected">{t('status_rejected')}</option>
+                        <option value="cancelled">{t('status_cancelled')}</option>
+                      </select>
+                      <button onClick={() => {
+                        setEditingBooking(b);
+                        setBookingEdits({
+                          start_date: b.start_date,
+                          end_date: b.end_date,
+                          total_price: b.total_price,
+                          contact_name: b.contact_name,
+                          contact_phone: b.contact_phone,
+                          contact_email: b.contact_email || '',
+                          status: b.status
+                        });
+                      }} className="px-3 py-1 bg-white/10 text-white rounded-lg hover:bg-white/20 text-[10px] font-bold uppercase tracking-widest">
+                        Edit
+                      </button>
+                      <button onClick={() => handleDeleteBooking(b.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
+                  {editingBooking?.id === b.id && (
+                    <form onSubmit={handleUpdateBooking} className="mt-4 flex flex-col gap-2 bg-black/50 p-4 rounded-lg">
+                      <div className="grid grid-cols-2 gap-2">
+                        <input type="date" value={bookingEdits.start_date} onChange={e => setBookingEdits({...bookingEdits, start_date: e.target.value})} className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" />
+                        <input type="date" value={bookingEdits.end_date} onChange={e => setBookingEdits({...bookingEdits, end_date: e.target.value})} className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" />
+                      </div>
+                      <input type="number" value={bookingEdits.total_price} onChange={e => setBookingEdits({...bookingEdits, total_price: e.target.value})} placeholder="Total Price" className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" />
+                      <input value={bookingEdits.contact_name} onChange={e => setBookingEdits({...bookingEdits, contact_name: e.target.value})} placeholder="Client Name" className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" />
+                      <input value={bookingEdits.contact_phone} onChange={e => setBookingEdits({...bookingEdits, contact_phone: e.target.value})} placeholder="Client Phone" className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" />
+                      <input value={bookingEdits.contact_email} onChange={e => setBookingEdits({...bookingEdits, contact_email: e.target.value})} placeholder="Client Email" className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button type="button" onClick={() => setEditingBooking(null)} className="px-3 py-1 bg-white/10 text-white rounded text-[10px] font-bold uppercase">Cancel</button>
+                        <button type="submit" className="px-3 py-1 bg-[#E2B808] text-black rounded text-[10px] font-bold uppercase tracking-widest">Save</button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               ))
              )}

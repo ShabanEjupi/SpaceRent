@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Car, Calendar, Plus, Trash2 } from 'lucide-react';
 
 export default function PartnerDashboardPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, token } = useAuthStore();
   const navigate = useNavigate();
   const [data, setData] = useState<{ vehicles: any[], bookings: any[] } | null>(null);
@@ -92,7 +92,7 @@ export default function PartnerDashboardPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, language: i18n.language })
       });
       if (res.ok) {
         fetchData();

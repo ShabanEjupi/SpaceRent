@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Globe, Menu, X } from 'lucide-react';
 import Home from './pages/home';
@@ -11,10 +11,11 @@ import AdminPage from './pages/admin';
 import PartnerDashboardPage from './pages/partner-dashboard';
 import { useAuthStore } from './store/authStore';
 
-export default function App() {
+function AppContent() {
   const { t, i18n } = useTranslation();
   const { user, logout, initAuth } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     initAuth();
@@ -24,34 +25,32 @@ export default function App() {
     i18n.changeLanguage(lng);
   };
 
-
   return (
-    <Router>
-      <div className="min-h-screen bg-[#050505] text-white font-sans flex flex-col">
-        {/* Navbar */}
-        <header className="h-20 bg-black/50 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
-          <div className="h-full px-4 sm:px-8 max-w-7xl mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <Link to="/" className="hidden sm:flex w-12 h-12 bg-gradient-to-br from-[#E2B808] to-[#9A7D0A] rounded-xl items-center justify-center shadow-[0_0_20px_rgba(226,184,8,0.2)]">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
-              </Link>
-              <Link to="/" className="flex flex-col">
-                <h1 className="text-xl font-black tracking-[0.2em] uppercase leading-none">SpaceRent</h1>
-                <span className="text-[10px] tracking-[0.4em] text-[#E2B808] font-bold">KOSOVO MISSION CONTROL</span>
-              </Link>
-            </div>
-            
-            <div className="flex items-center gap-8">
-              <nav className="hidden md:flex gap-6 text-[11px] font-bold tracking-widest uppercase text-white/40">
-                <Link to="/" className="hover:text-white transition-colors">{t('fleet')}</Link>
-                <Link to="/partner" className="hover:text-white transition-colors">{t('partner')}</Link>
-                {user?.role === 'partner' && (
-                  <Link to="/partner-dashboard" className="text-[#E2B808] border-b-2 border-[#E2B808] pb-1">{t('partner_panel')}</Link>
-                )}
-                {user?.role === 'admin' && (
-                  <Link to="/admin" className="text-[#E2B808] border-b-2 border-[#E2B808] pb-1">{t('admin_panel')}</Link>
-                )}
-              </nav>
+    <div className="min-h-screen bg-[#050505] text-white font-sans flex flex-col">
+      {/* Navbar */}
+      <header className="h-20 bg-black/50 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
+        <div className="h-full px-4 sm:px-8 max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="hidden sm:flex w-12 h-12 bg-gradient-to-br from-[#E2B808] to-[#9A7D0A] rounded-xl items-center justify-center shadow-[0_0_20px_rgba(226,184,8,0.2)]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+            </Link>
+            <Link to="/" className="flex flex-col">
+              <h1 className="text-xl font-black tracking-[0.2em] uppercase leading-none">SpaceRent</h1>
+              <span className="text-[10px] tracking-[0.4em] text-[#E2B808] font-bold">KOSOVO MISSION CONTROL</span>
+            </Link>
+          </div>
+          
+          <div className="flex items-center gap-8">
+            <nav className="hidden md:flex gap-6 text-[11px] font-bold tracking-widest uppercase">
+              <Link to="/" className={`transition-colors ${location.pathname === '/' || location.pathname === '/search' ? 'text-[#E2B808] border-b-2 border-[#E2B808] pb-1' : 'text-white/40 hover:text-white'}`}>{t('fleet')}</Link>
+              <Link to="/partner" className={`transition-colors ${location.pathname === '/partner' ? 'text-[#E2B808] border-b-2 border-[#E2B808] pb-1' : 'text-white/40 hover:text-white'}`}>{t('partner')}</Link>
+              {user?.role === 'partner' && (
+                <Link to="/partner-dashboard" className={`transition-colors ${location.pathname === '/partner-dashboard' ? 'text-[#E2B808] border-b-2 border-[#E2B808] pb-1' : 'text-white/40 hover:text-white'}`}>{t('partner_panel')}</Link>
+              )}
+              {user?.role === 'admin' && (
+                <Link to="/admin" className={`transition-colors ${location.pathname === '/admin' ? 'text-[#E2B808] border-b-2 border-[#E2B808] pb-1' : 'text-white/40 hover:text-white'}`}>{t('admin_panel')}</Link>
+              )}
+            </nav>
 
               <div className="hidden sm:flex bg-white/5 rounded-full p-1 border border-white/10 ring-1 ring-white/5">
                 <button 
@@ -119,21 +118,25 @@ export default function App() {
           </Routes>
         </main>
         
-        {/* Footer */}
         <footer className="h-12 px-4 sm:px-8 bg-black border-t border-white/5 flex items-center justify-between text-[9px] font-black tracking-[0.3em] uppercase text-white/20">
           <div className="flex gap-8">
-            <span className="hidden sm:inline">Nodes: PRN • PRI • PZI • PEJ</span>
-            <span>{"Infrastructure: Next.js + React // Supabase DB"}</span>
+            <span className="hidden sm:inline">SpaceRent App</span>
+            <span>{"KOSOVO MISSION CONTROL"}</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="hidden sm:inline">System Latency: 14ms</span>
             <div className="flex items-center gap-2 text-green-500/50">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div> 
-              <span className="hidden sm:inline">Engine Sync: Active</span>
+              <span className="hidden sm:inline">Status: Operational</span>
             </div>
           </div>
         </footer>
       </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

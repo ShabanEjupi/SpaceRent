@@ -62,6 +62,7 @@ export function DateRangePicker({ startDate, endDate, onStartDateChange, onEndDa
             selected={range}
             onSelect={handleSelect}
             className="rdp-dark"
+            disabled={{ before: new Date() }}
             modifiersClassNames={{
               selected: "bg-[#E2B808] text-black rounded-lg",
               range_middle: "bg-[#E2B808]/20 text-white rounded-none",
