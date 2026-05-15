@@ -31,8 +31,7 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          chmod +x ./gradlew
-          ./gradlew assembleDebug
+          gradle assembleDebug
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -56,7 +55,7 @@ jobs:
       - name: Build iOS App
         run: |
           cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release CODE_SIGNING_ALLOWED=NO build
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
