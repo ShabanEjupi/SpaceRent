@@ -34,11 +34,18 @@ jobs:
         run: npm run build
       - name: Sync Capacitor
         run: npx cap sync android
+      - name: Generate Assets
+        run: |
+          mkdir -p assets
+          curl -sL https://raw.githubusercontent.com/ionic-team/capacitor-assets/main/assets/icon-only.png -o assets/icon.png
+          curl -sL https://raw.githubusercontent.com/ionic-team/capacitor-assets/main/assets/splash.png -o assets/splash.png
+          curl -sL https://raw.githubusercontent.com/ionic-team/capacitor-assets/main/assets/splash-dark.png -o assets/splash-dark.png
+          npx --yes @capacitor/assets generate --android
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: "zulu"
-          java-version: "17"
+          java-version: "21"
       - name: Build Android APK
         run: |
           cd android
@@ -74,6 +81,13 @@ jobs:
         run: npm run build
       - name: Sync Capacitor
         run: npx cap sync ios
+      - name: Generate Assets
+        run: |
+          mkdir -p assets
+          curl -sL https://raw.githubusercontent.com/ionic-team/capacitor-assets/main/assets/icon-only.png -o assets/icon.png
+          curl -sL https://raw.githubusercontent.com/ionic-team/capacitor-assets/main/assets/splash.png -o assets/splash.png
+          curl -sL https://raw.githubusercontent.com/ionic-team/capacitor-assets/main/assets/splash-dark.png -o assets/splash-dark.png
+          npx --yes @capacitor/assets generate --ios
       - name: Build iOS App
         run: |
           cd ios/App
