@@ -3,7 +3,11 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.spacerent.app',
   appName: 'SpaceRent',
-  webDir: 'dist'
+  webDir: 'dist',
+  server: {
+    url: 'https://ais-pre-3zgnkqgcrx4367d2vtbdjk-337780065630.europe-west2.run.app/',
+    cleartext: true
+  }
 };
 
 export default config;
