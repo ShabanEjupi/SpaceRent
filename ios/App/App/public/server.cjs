@@ -145,6 +145,7 @@ app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
   }
   const { data: vehicles } = await supabase.from("vehicles").select("*");
   const { data: users } = await supabase.from("users").select("id, email, role");
+  const { data: locations } = await supabase.from("locations").select("*");
   res.json({
     metrics: { bookings: bookingsCount || 0 },
     applications: pendingPartners || [],
@@ -152,8 +153,47 @@ app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
     bookings: recentBookings || [],
     partners: allPartners,
     vehicles: vehicles || [],
-    users: users || []
+    users: users || [],
+    locations: locations || []
   });
+});
+app.post("/api/admin/edit-booking/:id", authenticateToken, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  const { start_date, end_date, total_price, contact_name, contact_phone, contact_email, status } = req.body;
+  await supabase.from("bookings").update({
+    start_date,
+    end_date,
+    total_price,
+    contact_name,
+    contact_phone,
+    contact_email,
+    status
+  }).eq("id", req.params.id);
+  res.json({ success: true });
+});
+app.post("/api/admin/delete-booking/:id", authenticateToken, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  await supabase.from("payments").delete().eq("booking_id", req.params.id);
+  await supabase.from("reviews").delete().eq("booking_id", req.params.id);
+  await supabase.from("bookings").delete().eq("id", req.params.id);
+  res.json({ success: true });
+});
+app.post("/api/admin/locations", authenticateToken, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  const { id, name } = req.body;
+  await supabase.from("locations").insert({ id, name });
+  res.json({ success: true });
+});
+app.post("/api/admin/locations/:id/update", authenticateToken, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  const { name } = req.body;
+  await supabase.from("locations").update({ name }).eq("id", req.params.id);
+  res.json({ success: true });
+});
+app.post("/api/admin/locations/:id/delete", authenticateToken, async (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+  await supabase.from("locations").delete().eq("id", req.params.id);
+  res.json({ success: true });
 });
 app.post("/api/admin/users/:id/role", authenticateToken, async (req, res) => {
   if (req.user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
@@ -483,7 +523,7 @@ app.post("/api/bookings/:id/status", authenticateToken, async (req, res) => {
   if (req.user.role !== "admin" && req.user.role !== "partner") {
     return res.status(403).json({ error: "Forbidden" });
   }
-  const { status } = req.body;
+  const { status, language = "en" } = req.body;
   if (!["pending", "accepted", "rejected", "cancelled"].includes(status)) return res.status(400).json({ error: "Invalid status" });
   const { data: booking } = await supabase.from("bookings").select("*, vehicles(make, model, partner_id, users(email))").eq("id", req.params.id).maybeSingle();
   if (!booking) return res.status(404).json({ error: "Booking not found" });
@@ -492,56 +532,106 @@ app.post("/api/bookings/:id/status", authenticateToken, async (req, res) => {
     if (!vehicle || vehicle.partner_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
   }
   await supabase.from("bookings").update({ status }).eq("id", req.params.id);
-  if (status === "accepted") {
+  if (status === "accepted" || status === "rejected" || status === "cancelled") {
     try {
       if (process.env.SMTP_USER && process.env.SMTP_PASS) {
         const clientEmail = booking.contact_email;
         const partnerEmail = vehicle?.users?.email || vehicle?.users?.[0]?.email;
         const { data: adminUsers } = await supabase.from("users").select("email").eq("role", "admin");
         const adminEmails = adminUsers?.map((a) => a.email) || [];
-        const carName = `${vehicle?.make} ${vehicle?.model}`;
+        const carName = `\${vehicle?.make} \${vehicle?.model}`;
+        const isSq = language === "sq";
+        const labels = {
+          vehicle: isSq ? "Automjeti" : "Vehicle",
+          dates: isSq ? "Datat" : "Dates",
+          totalPrice: isSq ? "\xC7mimi Total" : "Total Price",
+          contact: isSq ? "Kontakti" : "Contact",
+          contactEmail: isSq ? "Emaili i Klientit" : "Client Email",
+          acceptedSubject: isSq ? `SpaceRent: Rezervimi juaj u pranua (\${carName})` : `SpaceRent: Your Booking is Accepted (\${carName})`,
+          rejectedSubject: isSq ? `SpaceRent: Rezervimi juaj u refuzua (\${carName})` : `SpaceRent: Your Booking is Rejected (\${carName})`,
+          cancelledSubject: isSq ? `SpaceRent: Rezervimi juaj u anulua (\${carName})` : `SpaceRent: Your Booking is Cancelled (\${carName})`,
+          acceptedBody: isSq ? `P\xEBrsh\xEBndetje \${booking.contact_name || 'Klient'},
+
+Rezervimi juaj p\xEBr \${carName} \xEBsht\xEB pranuar.
+
+Detajet e Rezervimit:` : `Hello \${booking.contact_name || 'Client'},
+
+Your booking for \${carName} has been accepted.
+
+Booking Details:`,
+          rejectedBody: isSq ? `P\xEBrsh\xEBndetje \${booking.contact_name || 'Klient'},
+
+Na vjen keq, por rezervimi juaj p\xEBr \${carName} \xEBsht\xEB refuzuar.
+
+Detajet e Rezervimit:` : `Hello \${booking.contact_name || 'Client'},
+
+We are sorry, but your booking for \${carName} has been rejected.
+
+Booking Details:`,
+          cancelledBody: isSq ? `P\xEBrsh\xEBndetje \${booking.contact_name || 'Klient'},
+
+Rezervimi juaj p\xEBr \${carName} \xEBsht\xEB anulua.
+
+Detajet e Rezervimit:` : `Hello \${booking.contact_name || 'Client'},
+
+Your booking for \${carName} has been cancelled.
+
+Booking Details:`,
+          thanks: isSq ? `
+
+Faleminderit q\xEB zgjodh\xEBt SpaceRent!` : `
+
+Thank you for choosing SpaceRent!`
+        };
         const bookingDetails = `
-Vehicle: ${carName}
-Dates: ${booking.start_date} to ${booking.end_date}
-Total Price: EUR ${booking.total_price}
-Contact: ${booking.contact_name} (${booking.contact_phone})
+\${labels.vehicle}: \${carName}
+\${labels.dates}: \${booking.start_date} - \${booking.end_date}
+\${labels.totalPrice}: EUR \${booking.total_price}
+\${labels.contact}: \${booking.contact_name} (\${booking.contact_phone})
+\${labels.contactEmail}: \${booking.contact_email}
         `;
+        let subject = "";
+        let bodyPrefix = "";
+        if (status === "accepted") {
+          subject = labels.acceptedSubject;
+          bodyPrefix = labels.acceptedBody;
+        } else if (status === "rejected") {
+          subject = labels.rejectedSubject;
+          bodyPrefix = labels.rejectedBody;
+        } else if (status === "cancelled") {
+          subject = labels.cancelledSubject;
+          bodyPrefix = labels.cancelledBody;
+        }
         if (clientEmail) {
           await transporter.sendMail({
             from: process.env.SMTP_USER,
             to: clientEmail,
-            subject: `SpaceRent: Your Booking is Accepted (${carName})`,
-            text: `Hello ${booking.contact_name || "Client"},
-
-Your booking for ${carName} has been accepted.
-
-Booking Details:${bookingDetails}
-
-Thank you for choosing SpaceRent!`
+            subject,
+            text: `\${bodyPrefix}\${bookingDetails}\${labels.thanks}`
           });
         }
         if (partnerEmail) {
           await transporter.sendMail({
             from: process.env.SMTP_USER,
             to: partnerEmail,
-            subject: `SpaceRent: Booking Accepted (${carName})`,
+            subject: `SpaceRent: Booking \${status.toUpperCase()} (\${carName})`,
             text: `Hello Partner,
 
-A booking for your vehicle ${carName} has been accepted.
+A booking for your vehicle \${carName} has been \${status}.
 
-Booking Details:${bookingDetails}`
+Booking Details:\${bookingDetails}`
           });
         }
         if (adminEmails.length > 0) {
           await transporter.sendMail({
             from: process.env.SMTP_USER,
             to: adminEmails,
-            subject: `SpaceRent: Booking Accepted (${carName})`,
+            subject: `SpaceRent: Booking \${status.toUpperCase()} (\${carName})`,
             text: `Hello Admin,
 
-A booking for partner vehicle ${carName} has been accepted.
+A booking for partner vehicle \${carName} has been \${status}.
 
-Booking Details:${bookingDetails}`
+Booking Details:\${bookingDetails}`
           });
         }
       }

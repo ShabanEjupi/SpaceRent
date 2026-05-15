@@ -88,13 +88,13 @@ function AppContent() {
           {/* Mobile Menu */}
           {menuOpen && (
             <div className="sm:hidden absolute top-20 left-0 w-full bg-black/95 border-b border-white/10 p-4 flex flex-col gap-4">
-              <Link to="/" onClick={() => setMenuOpen(false)} className="text-xs font-bold uppercase tracking-widest text-white/70">{t('fleet')}</Link>
-              <Link to="/partner" onClick={() => setMenuOpen(false)} className="text-xs font-bold uppercase tracking-widest text-white/70">{t('partner')}</Link>
+              <Link to="/" onClick={() => setMenuOpen(false)} className={`text-xs font-bold uppercase tracking-widest ${location.pathname === '/' || location.pathname === '/search' ? 'text-[#E2B808]' : 'text-white/70'}`}>{t('fleet')}</Link>
+              <Link to="/partner" onClick={() => setMenuOpen(false)} className={`text-xs font-bold uppercase tracking-widest ${location.pathname === '/partner' ? 'text-[#E2B808]' : 'text-white/70'}`}>{t('partner')}</Link>
               {user?.role === 'partner' && (
-                <Link to="/partner-dashboard" onClick={() => setMenuOpen(false)} className="text-xs font-bold uppercase tracking-widest text-[#E2B808]">{t('partner_panel')}</Link>
+                <Link to="/partner-dashboard" onClick={() => setMenuOpen(false)} className={`text-xs font-bold uppercase tracking-widest ${location.pathname === '/partner-dashboard' ? 'text-[#E2B808]' : 'text-white/70'}`}>{t('partner_panel')}</Link>
               )}
               {user?.role === 'admin' && (
-                <Link to="/admin" onClick={() => setMenuOpen(false)} className="text-xs font-bold uppercase tracking-widest text-[#E2B808]">{t('admin_panel')}</Link>
+                <Link to="/admin" onClick={() => setMenuOpen(false)} className={`text-xs font-bold uppercase tracking-widest ${location.pathname === '/admin' ? 'text-[#E2B808]' : 'text-white/70'}`}>{t('admin_panel')}</Link>
               )}
               {user ? (
                 <button onClick={() => { logout(); setMenuOpen(false); }} className="text-left text-xs font-bold uppercase tracking-widest text-white/40">{t('logout')}</button>

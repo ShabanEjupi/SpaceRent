@@ -119,6 +119,8 @@ export default function AdminPage() {
 
   const [editingBooking, setEditingBooking] = useState<any>(null);
   const [bookingEdits, setBookingEdits] = useState({ start_date: '', end_date: '', total_price: '', contact_name: '', contact_phone: '', contact_email: '', status: '' });
+  const [newBooking, setNewBooking] = useState({ vehicle_id: '', user_id: '', start_date: '', end_date: '', total_price: '', contact_name: '', contact_phone: '', contact_email: '' });
+  const [showAddBooking, setShowAddBooking] = useState(false);
 
 
   const handleUpdateVehicle = async (e: React.FormEvent) => {
@@ -199,6 +201,27 @@ export default function AdminPage() {
       if (res.ok) {
         setEditingBooking(null);
         fetchData();
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleAddBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({...newBooking, user_id: undefined})
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowAddBooking(false);
+        setNewBooking({ vehicle_id: '', user_id: '', start_date: '', end_date: '', total_price: '', contact_name: '', contact_phone: '', contact_email: '' });
+        
+        // Auto-accept the booking if we're admin simulating? Actually let it be pending, or we can update status.
+        fetchData();
+      } else {
+        alert(data.error);
       }
     } catch (e) { console.error(e); }
   };
@@ -637,7 +660,35 @@ export default function AdminPage() {
           </div>
         </div>
         <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl p-6 flex flex-col gap-4 lg:col-span-2">
-          <h2 className="text-sm font-black text-white tracking-widest uppercase border-b border-white/10 pb-4">{t('recent_bookings_vehicles')}</h2>
+          <div className="flex justify-between items-center border-b border-white/10 pb-4">
+            <h2 className="text-sm font-black text-white tracking-widest uppercase">{t('recent_bookings_vehicles')}</h2>
+            <button onClick={() => setShowAddBooking(!showAddBooking)} className="flex items-center gap-2 bg-[#E2B808] text-black px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform">
+              <Plus className="w-4 h-4" /> Add
+            </button>
+          </div>
+          {showAddBooking && (
+            <form onSubmit={handleAddBooking} className="bg-black/50 border border-white/10 rounded-xl p-4 flex flex-col gap-3 mb-4">
+              <h3 className="text-xs font-bold text-white uppercase tracking-widest">Simulate New Booking</h3>
+              <select value={newBooking.vehicle_id} onChange={e => setNewBooking({...newBooking, vehicle_id: e.target.value})} className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" required>
+                <option value="">Select Vehicle</option>
+                {data.vehicles?.map((v: any) => (
+                  <option key={v.id} value={v.id}>{v.make} {v.model} (EUR {v.price_per_day}/day)</option>
+                ))}
+              </select>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="date" value={newBooking.start_date} onChange={e => setNewBooking({...newBooking, start_date: e.target.value})} className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" required />
+                <input type="date" value={newBooking.end_date} onChange={e => setNewBooking({...newBooking, end_date: e.target.value})} className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" required />
+              </div>
+              <input type="number" value={newBooking.total_price} onChange={e => setNewBooking({...newBooking, total_price: e.target.value})} placeholder="Total Price" className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" required />
+              <input value={newBooking.contact_name} onChange={e => setNewBooking({...newBooking, contact_name: e.target.value})} placeholder="Client Name" className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" required />
+              <input value={newBooking.contact_phone} onChange={e => setNewBooking({...newBooking, contact_phone: e.target.value})} placeholder="Client Phone" className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" required />
+              <input value={newBooking.contact_email} onChange={e => setNewBooking({...newBooking, contact_email: e.target.value})} placeholder="Client Email" className="bg-white/5 border border-white/10 rounded p-2 text-xs text-white" />
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowAddBooking(false)} className="px-3 py-1 bg-white/10 text-white rounded text-[10px] font-bold uppercase">Cancel</button>
+                <button type="submit" className="px-3 py-1 bg-[#E2B808] text-black rounded text-[10px] font-bold uppercase tracking-widest">Create</button>
+              </div>
+            </form>
+          )}
           <div className="flex flex-col gap-3 overflow-y-auto max-h-[400px]">
              {data.bookings?.length === 0 ? (
                <p className="text-xs text-white/40">{t('no_recent_bookings')}</p>
